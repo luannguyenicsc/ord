@@ -111,6 +111,16 @@ pub(crate) struct TransactionInfo {
 trait BitcoinCoreRpcResultExt<T> {
   fn into_option(self) -> Result<Option<T>>;
 }
+//Dev note: This is a struct that is used to serialize and deserialize the data in the database
+#[derive(Serialize, Deserialize)]
+pub(crate) struct InscriptionJson {
+  pub(crate) txid: String,
+  pub(crate) index:String,
+  pub(crate) genesis_fee: u64,
+  pub(crate) genesis_height: u64
+}
+
+
 
 impl<T> BitcoinCoreRpcResultExt<T> for Result<T, bitcoincore_rpc::Error> {
   fn into_option(self) -> Result<Option<T>> {
@@ -726,6 +736,10 @@ impl Index {
         .collect(),
     )
   }
+  // Get inscriptions for Json API
+  // pub(crate) fn get_all_inscriptions(
+
+  // )
 
   pub(crate) fn get_latest_inscriptions_with_prev_and_next(
     &self,

@@ -18,6 +18,7 @@ use {
     response::{IntoResponse, Redirect, Response},
     routing::get,
     Router, TypedHeader,
+    Json,
   },
   axum_server::Handle,
   rust_embed::RustEmbed,
@@ -34,6 +35,7 @@ use {
     cors::{Any, CorsLayer},
     set_header::SetResponseHeaderLayer,
   },
+  crate::index::InscriptionJson,
 };
 
 mod error;
@@ -123,6 +125,27 @@ pub(crate) struct Server {
   redirect_http_to_https: bool,
 }
 
+//Dev note: Define the API response structure
+#[derive(Serialize, Deserialize)]
+struct ApiResponse<T> {
+    code: i32,
+    msg: String,
+    count: usize,
+    data: T,
+}
+//Dev note: Define the API Args structure
+#[derive(Serialize, Deserialize)]
+struct ApiArgs {
+    page: usize,
+    size: usize,
+    // sort: String,
+    // order: String,
+    // keyword: String,
+    // status: String,
+    // start_time: String,
+    // end_time: String,
+}
+
 impl Server {
   pub(crate) fn run(self, options: Options, index: Arc<Index>, handle: Handle) -> Result {
     Runtime::new()?.block_on(async {
@@ -172,6 +195,7 @@ impl Server {
         .route("/static/*path", get(Self::static_asset))
         .route("/status", get(Self::status))
         .route("/tx/:txid", get(Self::transaction))
+        .route("/api/inscriptions", get(Self::inscriptions_json))
         .layer(Extension(index))
         .layer(Extension(page_config))
         .layer(Extension(Arc::new(config)))
@@ -912,6 +936,35 @@ impl Server {
       .page(page_config, index.has_sat_index()?),
     )
   }
+  //Dev note:
+  //Make a function for api/inscriptions
+  //Return list of inscriptions
+  async fn inscriptions_json(
+    Extension(index): Extension<Arc<Index>>,
+    Query(args): Query<ApiArgs>
+  ) -> Json<ApiResponse<Vec<InscriptionId>>> {
+
+    match index.get_latest_inscriptions_with_prev_and_next(args.size, None) {
+      Ok((inscriptions, prev, next)) => {
+          let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
+              code: 200,
+              count: inscriptions.len(),
+              msg: "ok".into(),
+              data: inscriptions,
+          };
+          Json(res)
+      }
+      Err(error) => {
+        let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
+          code: 500,
+          count: 0,
+          msg: "error".into(),
+          data: Vec::new(),
+        };
+        return Json(res);
+      }
+    }
+  }
 
   async fn inscriptions(
     Extension(page_config): Extension<Arc<PageConfig>>,
@@ -934,6 +987,12 @@ impl Server {
     from: Option<i64>,
   ) -> ServerResult<PageHtml<InscriptionsHtml>> {
     let (inscriptions, prev, next) = index.get_latest_inscriptions_with_prev_and_next(100, from)?;
+
+    println!("from: {:?}", from);
+    println!("inscriptions: {:?}", inscriptions);
+    println!("prev: {:?}", prev);
+    println!("next: {:?}", next);
+
     Ok(
       InscriptionsHtml {
         inscriptions,
