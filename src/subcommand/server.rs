@@ -131,6 +131,8 @@ struct ApiResponse<T> {
     code: i32,
     msg: String,
     count: usize,
+    total: usize,
+    page_count: usize,
     data: T,
 }
 //Dev note: Define the API Args structure
@@ -138,12 +140,6 @@ struct ApiResponse<T> {
 struct ApiArgs {
     page: usize,
     size: usize,
-    // sort: String,
-    // order: String,
-    // keyword: String,
-    // status: String,
-    // start_time: String,
-    // end_time: String,
 }
 
 impl Server {
@@ -944,11 +940,13 @@ impl Server {
     Query(args): Query<ApiArgs>
   ) -> Json<ApiResponse<Vec<InscriptionId>>> {
 
-    match index.get_latest_inscriptions_with_prev_and_next(args.size, None) {
-      Ok((inscriptions, prev, next)) => {
+    match index.get_latest_inscriptions_with_page_and_size(args.page, args.size) {
+      Ok((inscriptions, total, page_count)) => {
           let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
               code: 200,
               count: inscriptions.len(),
+              total: total,
+              page_count: page_count,
               msg: "ok".into(),
               data: inscriptions,
           };
@@ -958,6 +956,8 @@ impl Server {
         let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
           code: 500,
           count: 0,
+          total: 0,
+          page_count: 0,
           msg: "error".into(),
           data: Vec::new(),
         };

@@ -740,6 +740,38 @@ impl Index {
   // pub(crate) fn get_all_inscriptions(
 
   // )
+  pub(crate) fn get_latest_inscriptions_with_page_and_size(
+    &self,
+    page: usize,
+    page_size: usize,
+  ) -> Result<(Vec<InscriptionId>, usize, usize)> {
+    // reading database
+    let rtx = self.database.begin_read()?;
+    let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
+
+    /// Count total of inscriptions
+    let total = inscription_number_to_inscription_id.iter()?.count();
+    /// Count total of pages
+    let page_count = (total / page_size) + 1;
+
+    let latest = match inscription_number_to_inscription_id.iter()?.rev().next() {
+        Some((number, _id)) => number.value(),
+        None => return Ok(Default::default()),
+    };
+
+    let from = latest - (page_size as i64 * (page - 1) as i64);
+
+    let inscriptions = inscription_number_to_inscription_id
+        .range(..=from)?
+        .rev()
+        .take(page_size)
+        .map(|(_number, id)| Entry::load(*id.value()))
+        .collect();
+
+    Ok((inscriptions, total, page_count))
+  }     
+
+
 
   pub(crate) fn get_latest_inscriptions_with_prev_and_next(
     &self,
@@ -757,7 +789,6 @@ impl Index {
     };
 
     let from = from.unwrap_or(latest);
-
     let prev = if let Some(prev) = from.checked_sub(n.try_into()?) {
       inscription_number_to_inscription_id
         .get(&prev)?
