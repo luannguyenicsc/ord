@@ -111,16 +111,31 @@ pub(crate) struct TransactionInfo {
 trait BitcoinCoreRpcResultExt<T> {
   fn into_option(self) -> Result<Option<T>>;
 }
+
 //Dev note: This is a struct that is used to serialize and deserialize the data in the database
 #[derive(Serialize, Deserialize)]
 pub(crate) struct InscriptionJson {
-  pub(crate) txid: String,
-  pub(crate) index:String,
-  pub(crate) genesis_fee: u64,
-  pub(crate) genesis_height: u64
+  inscription_id: String, 
+  inscription_number: i64, 
+  content_type:String,
+  content_length:usize,
+  content:String,
+  timestamp:u32,
+  owner_address:String, 
+  genesis_height: u64,
+  genesis_txid:String,
+  genesis_address:String,
+  genesis_fee:u64, 
+  sat:Option<Sat>,
+  sat_mame:String, // sat.name
+  output_value:u64,
+  preview_link:String,
+  tx_id:String,
+  output:String,
+  offset:u64,
+  location:String,
+
 }
-
-
 
 impl<T> BitcoinCoreRpcResultExt<T> for Result<T, bitcoincore_rpc::Error> {
   fn into_option(self) -> Result<Option<T>> {
@@ -744,14 +759,15 @@ impl Index {
     &self,
     page: usize,
     page_size: usize,
-  ) -> Result<(Vec<InscriptionId>, usize, usize)> {
+  ) -> Result<(Vec<InscriptionJson>, usize, usize)> {
     // reading database
     let rtx = self.database.begin_read()?;
     let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
+    let mut list:Vec<InscriptionJson> = Vec::new();
 
-    /// Count total of inscriptions
+    // Count total of inscriptions
     let total = inscription_number_to_inscription_id.iter()?.count();
-    /// Count total of pages
+    // Count total of pages
     let page_count = (total / page_size) + 1;
 
     let latest = match inscription_number_to_inscription_id.iter()?.rev().next() {
@@ -761,17 +777,85 @@ impl Index {
 
     let from = latest - (page_size as i64 * (page - 1) as i64);
 
-    let inscriptions = inscription_number_to_inscription_id
+    let inscriptions:Vec<InscriptionId>  = inscription_number_to_inscription_id
         .range(..=from)?
         .rev()
         .take(page_size)
         .map(|(_number, id)| Entry::load(*id.value()))
         .collect();
 
-    Ok((inscriptions, total, page_count))
+    for inscription_id in inscriptions{
+      let info = self.get_inscription_info(inscription_id);
+      match info {
+        Ok(value) =>{
+          list.push(value);
+        },
+        Err(_) => {}
+      }
+    }
+
+
+    Ok((list, total, page_count))
   }     
 
+  // Get inscription info 
+  pub(crate) fn get_inscription_info(
+    &self,
+    inscription_id:InscriptionId,
+  )-> Result<InscriptionJson> {
 
+    let entry = self.get_inscription_entry(inscription_id)?.unwrap();
+    let inscription = self.get_inscription_by_id(inscription_id)?.unwrap();
+    let satpoint = self.get_inscription_satpoint_by_id(inscription_id)?.unwrap();
+    let output = self
+      .get_transaction(satpoint.outpoint.txid)?
+      .unwrap()
+      .output
+      .into_iter()
+      .nth(satpoint.outpoint.vout.try_into().unwrap())
+      .unwrap();
+
+    let mut address = "".to_string();
+    match self.options.chain().address_from_script(&output.script_pubkey) {
+      Ok(addr) =>{
+        address = addr.to_string();
+      },
+      Err(_) =>{}
+    }
+    // link   /preview/{{self.inscription_id}}
+
+    let preview_link = format!("https://ord.miexx.com/preview/{}", inscription_id.to_string());
+
+    let content = inscription.body().unwrap();
+    let txt =  std::str::from_utf8(content).unwrap();
+    let hash = self.get_block_by_height(entry.height)?.unwrap();
+
+    let sat_name = entry.sat.map(|sat| sat.name()).unwrap_or(String::new());
+
+    let res:InscriptionJson = InscriptionJson{
+      inscription_id: inscription_id.to_string(),
+      inscription_number: entry.number,
+      content_type: inscription.content_type().unwrap().to_string(),
+      content_length: inscription.content_length().unwrap(),
+      content: txt.to_string(),
+      timestamp: entry.timestamp,
+      owner_address: address,
+      genesis_height: entry.height,
+      genesis_txid: inscription_id.txid.to_string(),
+      genesis_address: hash.block_hash().to_string(),
+      genesis_fee: entry.fee,
+      sat: entry.sat,
+      sat_mame:sat_name,
+      output_value: output.value,
+      preview_link: preview_link,
+      tx_id: satpoint.outpoint.txid.to_string(),
+      output: satpoint.outpoint.to_string(),
+      location: satpoint.to_string(),
+      offset: satpoint.offset,
+    };
+    Ok(res)
+    
+  }
 
   pub(crate) fn get_latest_inscriptions_with_prev_and_next(
     &self,

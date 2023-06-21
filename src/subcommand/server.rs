@@ -191,7 +191,8 @@ impl Server {
         .route("/static/*path", get(Self::static_asset))
         .route("/status", get(Self::status))
         .route("/tx/:txid", get(Self::transaction))
-        .route("/api/inscriptions", get(Self::inscriptions_json))
+        .route("/api/inscriptions", get(Self::inscriptions_api))
+        .route("/api/inscription/:inscription_id", get(Self::inscription_api))
         .layer(Extension(index))
         .layer(Extension(page_config))
         .layer(Extension(Arc::new(config)))
@@ -935,14 +936,45 @@ impl Server {
   //Dev note:
   //Make a function for api/inscriptions
   //Return list of inscriptions
-  async fn inscriptions_json(
+  // async fn inscriptions_api_old(
+  //   Extension(index): Extension<Arc<Index>>,
+  //   Query(args): Query<ApiArgs>
+  // ) -> Json<ApiResponse<Vec<InscriptionId>>> {
+
+  //   match index.get_latest_inscriptions_with_page_and_size(args.page, args.size) {
+  //     Ok((inscriptions, total, page_count)) => {
+  //         let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
+  //             code: 200,
+  //             count: inscriptions.len(),
+  //             total: total,
+  //             page_count: page_count,
+  //             msg: "ok".into(),
+  //             data: inscriptions,
+  //         };
+  //         Json(res)
+  //     }
+  //     Err(error) => {
+  //       let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
+  //         code: 500,
+  //         count: 0,
+  //         total: 0,
+  //         page_count: 0,
+  //         msg: "error".into(),
+  //         data: Vec::new(),
+  //       };
+  //       return Json(res);
+  //     }
+  //   }
+  // }
+
+  async fn inscriptions_api(
     Extension(index): Extension<Arc<Index>>,
     Query(args): Query<ApiArgs>
-  ) -> Json<ApiResponse<Vec<InscriptionId>>> {
+  ) -> Json<ApiResponse<Vec<InscriptionJson>>> {
 
     match index.get_latest_inscriptions_with_page_and_size(args.page, args.size) {
       Ok((inscriptions, total, page_count)) => {
-          let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
+          let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
               code: 200,
               count: inscriptions.len(),
               total: total,
@@ -953,7 +985,7 @@ impl Server {
           Json(res)
       }
       Err(error) => {
-        let res: ApiResponse<Vec<InscriptionId>> = ApiResponse {
+        let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
           code: 500,
           count: 0,
           total: 0,
@@ -964,6 +996,48 @@ impl Server {
         return Json(res);
       }
     }
+  }
+
+
+
+    // let list = index.get_latest_inscriptions_with_page_and_size(args.page, args.size);
+    // match list{
+    //   Ok(list, total, page_count)=>{
+    //     data = list;
+    //     total = total;
+    //     page_count = page_count;
+    //   },
+    //   Err(_) => {}
+    // }
+    // let  res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
+    //   code: 200,
+    //   count:data.len(),
+    //   msg: "ok".into(),
+    //   total: total,
+    //   page_count: page_count,
+    //   data: data,
+    // };
+
+
+    // Json(res)
+  // }
+  //Dev note: api/inscriptions/100
+  async fn inscription_api(
+    Extension(index): Extension<Arc<Index>>,
+    Path(inscription_id): Path<InscriptionId>,
+  ) -> Json<ApiResponse<InscriptionJson>>{
+
+    let data = index.get_inscription_info(inscription_id).unwrap();
+    let  res: ApiResponse<InscriptionJson> = ApiResponse {
+      code: 200,
+      count: 1,
+      total: 1,
+      page_count: 1,
+      msg: "ok".into(),
+      data: data,
+    };
+
+    Json(res)
   }
 
   async fn inscriptions(
