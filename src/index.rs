@@ -943,7 +943,7 @@ impl Index {
       .open_table(SATPOINT_TO_INSCRIPTION_ID)?
       .range::<&[u8; 44]>(&[0; 44]..)?
       .map(|(satpoint, id)| (Entry::load(*satpoint.value()), Entry::load(*id.value())))
-      .take(n.unwrap_or(usize::MAX))
+      .take(n.unwrap_or(i64::MAX))
       .collect();
     
     println!("get_inscriptions_api: {:?}", satpoint);
@@ -960,14 +960,12 @@ impl Index {
       genesis_txid: "".to_string(),
       genesis_address: "".to_string(),
       genesis_fee: 0,
-      sat: "".to_string(),
       sat_mame:"".to_string(),
       output_value: 0,
       preview_link: "".to_string(),
       tx_id: "".to_string(),
       output: "".to_string(),
       location: "".to_string(),
-      offset: "".to_string(),
     };
     Ok(res)
     
@@ -984,7 +982,7 @@ impl Index {
     let rtx = self.database.begin_read()?;
     let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
     let mut list:Vec<InscriptionJson> = Vec::new();
-    let get_inscriptions = self.get_inscriptions_api(10);
+    let get_inscriptions = self.get_inscriptions_api(page_size as i64);
     
     // Count total of inscriptions
     let total = inscription_number_to_inscription_id.iter()?.count();
