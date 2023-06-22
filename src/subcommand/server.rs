@@ -193,6 +193,7 @@ impl Server {
         .route("/tx/:txid", get(Self::transaction))
         .route("/api/inscriptions", get(Self::inscriptions_api))
         .route("/api/inscription/:inscription_id", get(Self::inscription_api))
+        .route("/api/address/:address", get(Self::inscription_address_api))
         .layer(Extension(index))
         .layer(Extension(page_config))
         .layer(Extension(Arc::new(config)))
@@ -1086,6 +1087,36 @@ impl Server {
     }
 
     Redirect::to(&destination)
+  }
+}
+
+async fn inscription_address_api(
+  Extension(index): Extension<Arc<Index>>,
+  Path(address): Path<i64>,
+  Query(args): Query<ApiArgs>
+) -> Json<ApiResponse<Vec<InscriptionJson>>> {
+
+  match index.get_address_inscription(address, args.page, args.size) {
+    Ok((inscriptions)) => {
+        let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
+            code: 200,
+            address: address,
+            count: inscriptions.len(),
+            msg: "ok".into(),
+            data: inscriptions,
+        };
+        Json(res)
+    }
+    Err(error) => {
+      let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
+        code: 500,
+        count: 0,
+        address: address,
+        msg: "error".into(),
+        data: Vec::new(),
+      };
+      return Json(res);
+    }
   }
 }
 
