@@ -934,7 +934,7 @@ impl Index {
   pub(crate) fn get_inscriptions_api(
     &self,
     n: usize,
-  )-> Result<InscriptionJson> {
+  )-> Result<Option<i64>> {
 
     let satpoint = self
       .database
@@ -947,7 +947,7 @@ impl Index {
     
     println!("get_inscriptions_api: {:?}", satpoint);
 
-    let res = {};
+    let res = 1;
     Ok(res)
     
   }
