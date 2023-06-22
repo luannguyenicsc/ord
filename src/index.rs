@@ -934,7 +934,7 @@ impl Index {
   // Get inscription info 
   pub(crate) fn get_inscriptions_api(
     &self,
-    n: Option<usize>,
+    n: Option<i64>,
   )-> Result<InscriptionJson> {
 
     let satpoint = self
@@ -949,25 +949,25 @@ impl Index {
     println!("get_inscriptions_api: {:?}", satpoint);
 
     let res:InscriptionJson = InscriptionJson{
-      inscription_id: "",
+      inscription_id: "".to_string(),
       inscription_number: 0,
-      content_type: "",
+      content_type: "".to_string(),
       content_length: 0,
-      content: "",
+      content: "".to_string(),
       timestamp: 0,
-      owner_address: "",
+      owner_address: "".to_string(),
       genesis_height: 0,
-      genesis_txid: "",
-      genesis_address: "",
+      genesis_txid: "".to_string(),
+      genesis_address: "".to_string(),
       genesis_fee: 0,
-      sat: "",
-      sat_mame:"",
+      sat: "".to_string(),
+      sat_mame:"".to_string(),
       output_value: 0,
-      preview_link: "",
-      tx_id: "",
-      output: "",
-      location: "",
-      offset: "",
+      preview_link: "".to_string(),
+      tx_id: "".to_string(),
+      output: "".to_string(),
+      location: "".to_string(),
+      offset: "".to_string(),
     };
     Ok(res)
     
