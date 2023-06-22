@@ -1091,7 +1091,7 @@ impl Server {
 
   async fn inscription_address_api(
     Extension(index): Extension<Arc<Index>>,
-    Path(address): Path<i64>,
+    Path(address): Path<usize>,
     Query(args): Query<ApiArgs>
   ) -> Json<ApiResponse<Vec<InscriptionJson>>> {
   
