@@ -1088,40 +1088,41 @@ impl Server {
 
     Redirect::to(&destination)
   }
-}
 
-async fn inscription_address_api(
-  Extension(index): Extension<Arc<Index>>,
-  Path(address): Path<i64>,
-  Query(args): Query<ApiArgs>
-) -> Json<ApiResponse<Vec<InscriptionJson>>> {
-
-  match index.get_address_inscription(address, args.page, args.size) {
-    Ok((inscriptions, total, page_count)) => {
+  async fn inscription_address_api(
+    Extension(index): Extension<Arc<Index>>,
+    Path(address): Path<i64>,
+    Query(args): Query<ApiArgs>
+  ) -> Json<ApiResponse<Vec<InscriptionJson>>> {
+  
+    match index.get_address_inscription(address, args.page, args.size) {
+      Ok((inscriptions, total, page_count)) => {
+          let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
+              code: 200,
+              address: address,
+              count: inscriptions.len(),
+              total: total,
+              page_count: page_count,
+              msg: "ok".into(),
+              data: inscriptions,
+          };
+          Json(res)
+      }
+      Err(error) => {
         let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
-            code: 200,
-            address: address,
-            count: inscriptions.len(),
-            total: total,
-            page_count: page_count,
-            msg: "ok".into(),
-            data: inscriptions,
+          code: 500,
+          address: address,
+          count: 0,        
+          total: 0,
+          page_count: 0,
+          msg: "error".into(),
+          data: Vec::new(),
         };
-        Json(res)
-    }
-    Err(error) => {
-      let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
-        code: 500,
-        address: address,
-        count: 0,        
-        total: 0,
-        page_count: 0,
-        msg: "error".into(),
-        data: Vec::new(),
-      };
-      return Json(res);
+        return Json(res);
+      }
     }
   }
+
 }
 
 #[cfg(test)]
