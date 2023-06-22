@@ -1099,7 +1099,7 @@ impl Server {
       Ok((inscriptions, total, page_count)) => {
           let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
               code: 200,
-              msg: address,
+              msg: address.to_string(),
               count: inscriptions.len(),
               total: total,
               page_count: page_count,
@@ -1111,7 +1111,7 @@ impl Server {
       Err(error) => {
         let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
           code: 500,
-          msg: address,
+          msg: address.to_string(),
           count: 0,        
           total: 0,
           page_count: 0,
