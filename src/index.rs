@@ -971,8 +971,7 @@ impl Index {
       }
     }
 
-
-    Ok((list, total))
+    Ok((list, total, page_count))
   }  
   
   #[cfg(test)]
