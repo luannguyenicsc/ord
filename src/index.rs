@@ -942,30 +942,12 @@ impl Index {
       .open_table(SATPOINT_TO_INSCRIPTION_ID)?
       .range::<&[u8; 44]>(&[0; 44]..)?
       .map(|(satpoint, id)| (Entry::load(*satpoint.value()), Entry::load(*id.value())))
-      .take(n.unwrap_or(usize::MAX))
+      .take(n)
       .collect();
     
     println!("get_inscriptions_api: {:?}", satpoint);
 
-    let res:InscriptionJson = InscriptionJson{
-      inscription_id: "".to_string(),
-      inscription_number: 0,
-      content_type: "".to_string(),
-      content_length: 0,
-      content: "".to_string(),
-      timestamp: 0,
-      owner_address: "".to_string(),
-      genesis_height: 0,
-      genesis_txid: "".to_string(),
-      genesis_address: "".to_string(),
-      genesis_fee: 0,
-      sat_mame:"".to_string(),
-      output_value: 0,
-      preview_link: "".to_string(),
-      tx_id: "".to_string(),
-      output: "".to_string(),
-      location: "".to_string(),
-    };
+    let res = {};
     Ok(res)
     
   }
