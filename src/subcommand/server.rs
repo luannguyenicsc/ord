@@ -1097,11 +1097,13 @@ async fn inscription_address_api(
 ) -> Json<ApiResponse<Vec<InscriptionJson>>> {
 
   match index.get_address_inscription(address, args.page, args.size) {
-    Ok((inscriptions)) => {
+    Ok((inscriptions, total, page_count)) => {
         let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
             code: 200,
             address: address,
             count: inscriptions.len(),
+            total: total,
+            page_count: page_count,
             msg: "ok".into(),
             data: inscriptions,
         };
@@ -1110,8 +1112,10 @@ async fn inscription_address_api(
     Err(error) => {
       let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
         code: 500,
-        count: 0,
         address: address,
+        count: 0,        
+        total: 0,
+        page_count: 0,
         msg: "error".into(),
         data: Vec::new(),
       };
