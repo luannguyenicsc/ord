@@ -933,10 +933,10 @@ impl Index {
   // Get address inscriptions 
   pub(crate) fn get_address_inscription(
     &self,
-    address: usize,
+    address: i64,
     page: usize,
     page_size: usize,
-  ) -> Result<(Vec<InscriptionJson>, usize, usize, usize)> {
+  ) -> Result<(Vec<InscriptionJson>, usize, usize)> {
     // reading database
     let rtx = self.database.begin_read()?;
     let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
