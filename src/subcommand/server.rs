@@ -1099,11 +1099,11 @@ impl Server {
       Ok((inscriptions, total, page_count)) => {
           let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
               code: 200,
-              address: address,
+              msg: address,
               count: inscriptions.len(),
               total: total,
               page_count: page_count,
-              msg: "ok".into(),
+              // msg: "ok".into(),
               data: inscriptions,
           };
           Json(res)
@@ -1111,11 +1111,11 @@ impl Server {
       Err(error) => {
         let res: ApiResponse<Vec<InscriptionJson>> = ApiResponse {
           code: 500,
-          address: address,
+          msg: address,
           count: 0,        
           total: 0,
           page_count: 0,
-          msg: "error".into(),
+          // msg: "error".into(),
           data: Vec::new(),
         };
         return Json(res);
