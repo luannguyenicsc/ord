@@ -931,6 +931,51 @@ impl Index {
     )
   }
 
+  // Get address inscriptions 
+  pub(crate) fn get_address_inscription(
+    &self,
+    address: usize,
+    page: usize,
+    page_size: usize,
+  ) -> Result<(Vec<InscriptionJson>, usize, usize, usize)> {
+    // reading database
+    let rtx = self.database.begin_read()?;
+    let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
+    let mut list:Vec<InscriptionJson> = Vec::new();
+
+    // Count total of inscriptions
+    let total = inscription_number_to_inscription_id.iter()?.count();
+    // Count total of pages
+    let page_count = (total / page_size) + 1;
+
+    let latest = match inscription_number_to_inscription_id.iter()?.rev().next() {
+        Some((number, _id)) => number.value(),
+        None => return Ok(Default::default()),
+    };
+
+    let from = latest - (page_size as i64 * (page - 1) as i64);
+
+    let inscriptions:Vec<InscriptionId>  = inscription_number_to_inscription_id
+        .range(..=from)?
+        .rev()
+        .take(page_size)
+        .map(|(_number, id)| Entry::load(*id.value()))
+        .collect();
+
+    for inscription_id in inscriptions{
+      let info = self.get_inscription_info(inscription_id);
+      match info {
+        Ok(value) =>{
+          list.push(value);
+        },
+        Err(_) => {}
+      }
+    }
+
+
+    Ok((list, total))
+  }  
+  
   #[cfg(test)]
   fn assert_inscription_location(
     &self,
