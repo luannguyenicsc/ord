@@ -827,7 +827,8 @@ impl Index {
     let preview_link = format!("https://ord.miexx.com/preview/{}", inscription_id.to_string());
 
     let content = inscription.body().unwrap();
-    let txt =  std::str::from_utf8(content).unwrap();
+    let txt = String::from_utf8_lossy(&content);
+
     let hash = self.get_block_by_height(entry.height)?.unwrap();
 
     let sat_name = entry.sat.map(|sat| sat.name()).unwrap_or(String::new());
