@@ -53,6 +53,7 @@ pub(crate) struct Index {
   height_limit: Option<u64>,
   options: Options,
   reorged: AtomicBool,
+  inscription_cache: Arc<Mutex<HashMap<InscriptionId, InscriptionJson>>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -112,8 +113,12 @@ trait BitcoinCoreRpcResultExt<T> {
   fn into_option(self) -> Result<Option<T>>;
 }
 
-//Dev note: This is a struct that is used to serialize and deserialize the data in the database
-#[derive(Serialize, Deserialize)]
+// cache: HashMap<InscriptionId, InscriptionJson>
+// let mut cache: HashMap<InscriptionId, InscriptionJson> = HashMap::new();
+
+//Dev note: This is a struct that is used to serialize and deserialize the data in the database  #[derive(Debug, Clone, Copy)]
+
+#[derive(Serialize, Deserialize, Clone)]
 pub(crate) struct InscriptionJson {
   inscription_id: String, 
   inscription_number: i64, 
@@ -136,6 +141,7 @@ pub(crate) struct InscriptionJson {
   location:String,
 
 }
+
 
 impl<T> BitcoinCoreRpcResultExt<T> for Result<T, bitcoincore_rpc::Error> {
   fn into_option(self) -> Result<Option<T>> {
@@ -255,6 +261,7 @@ impl Index {
       height_limit: options.height_limit,
       reorged: AtomicBool::new(false),
       options: options.clone(),
+      inscription_cache: Arc::new(Mutex::new(HashMap::new())),
     })
   }
 
@@ -763,7 +770,7 @@ impl Index {
     // reading database
     let rtx = self.database.begin_read()?;
     let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
-    let mut list:Vec<InscriptionJson> = Vec::new();
+    let list:Vec<InscriptionJson> = Vec::new();
 
     // Count total of inscriptions
     let total = inscription_number_to_inscription_id.iter()?.count();
@@ -784,25 +791,39 @@ impl Index {
         .map(|(_number, id)| Entry::load(*id.value()))
         .collect();
 
-    for inscription_id in inscriptions{
-      let info = self.get_inscription_info(inscription_id);
-      match info {
-        Ok(value) =>{
-          list.push(value);
-        },
-        Err(_) => {}
-      }
-    }
-
+    // for inscription_id in inscriptions{
+    //   let info = self.get_inscription_info(inscription_id);
+    //   match info {
+    //     Ok(value) =>{
+    //       list.push(value);
+    //     },
+    //     Err(_) => {}
+    //   }
+    // }
+    let list: Vec<InscriptionJson> = inscriptions
+    .into_iter()
+    .filter_map(|inscription_id| self.get_inscription_info(inscription_id).ok())
+    .collect();
 
     Ok((list, total, page_count))
   }     
+
 
   // Get inscription info 
   pub(crate) fn get_inscription_info(
     &self,
     inscription_id:InscriptionId,
   )-> Result<InscriptionJson> {
+
+    println!("inscription_id: {:?}", inscription_id);
+    //  Read inscriptions from cache
+    let mut cache = self.inscription_cache.lock().unwrap();
+
+    if cache.contains_key(&inscription_id) {
+        if let Some(res) = cache.get(&inscription_id) {
+            return Ok(res.clone());
+        }
+    }
 
     let entry = self.get_inscription_entry(inscription_id)?.unwrap();
     let inscription = self.get_inscription_by_id(inscription_id)?.unwrap();
@@ -822,22 +843,25 @@ impl Index {
       },
       Err(_) =>{}
     }
-    // link   /preview/{{self.inscription_id}}
-
     let preview_link = format!("https://ord.miexx.com/preview/{}", inscription_id.to_string());
 
-    let content = inscription.body().unwrap();
+    let content = match inscription.body() {
+      Some(body) => body,
+      None => &[],
+    };
+  
     let txt = String::from_utf8_lossy(&content);
-
     let hash = self.get_block_by_height(entry.height)?.unwrap();
 
     let sat_name = entry.sat.map(|sat| sat.name()).unwrap_or(String::new());
 
+    let content_type = inscription.content_type().unwrap_or("default_content_type").to_string();
+    let content_length = inscription.content_length().unwrap_or(0);
     let res:InscriptionJson = InscriptionJson{
       inscription_id: inscription_id.to_string(),
       inscription_number: entry.number,
-      content_type: inscription.content_type().unwrap().to_string(),
-      content_length: inscription.content_length().unwrap(),
+      content_type: content_type,
+      content_length: content_length,
       content: txt.to_string(),
       timestamp: entry.timestamp,
       owner_address: address,
@@ -854,7 +878,11 @@ impl Index {
       location: satpoint.to_string(),
       offset: satpoint.offset,
     };
-    Ok(res)
+    
+    cache.insert(inscription_id, res);
+    let res = cache.get(&inscription_id).cloned();
+
+    Ok(res.unwrap())
     
   }
 
