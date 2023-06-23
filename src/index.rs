@@ -960,26 +960,24 @@ impl Index {
   }
 
   // Get inscription info 
-  pub(crate) fn get_inscriptions_api(
-    &self,
-    n: usize,
-  )-> Result<Option<usize>> {
+  // pub(crate) fn get_inscriptions_api(
+  //   &self,
+  //   n: usize,
+  // )-> Result<Option<usize>> {
 
-    let satpoint = self
-      .database
-      .begin_read()?
-      .open_table(SATPOINT_TO_INSCRIPTION_ID)?
-      .range::<&[u8; 44]>(&[0; 44]..)?
-      .map(|(satpoint, id)| (Entry::load(*satpoint.value()), Entry::load(*id.value())))
-      .take(n)
-      .collect();
-    
-    println!("get_inscriptions_api: {:?}", satpoint);
+  //   // let satpoint = self.database
+  //   //   .begin_read()?
+  //   //   .open_table(SATPOINT_TO_INSCRIPTION_ID)?
+  //   //   .range::<&[u8; 44]>(&[0; 44]..)?
+  //   //   .map(|(_satpoint, id)| (Entry::load(*satpoint.value()), Entry::load(*id.value())))
+  //   //   .take(n)
+  //   //   .collect();
 
-    let res = n;
-    Ok(res)
-    
-  }
+  //   println!("get_inscriptions_api: {:?}", satpoint);
+
+  //   let res = n;
+  //   Ok(Some(res))    
+  // }
 
   // Get address inscriptions 
   pub(crate) fn get_address_inscription(
@@ -992,7 +990,7 @@ impl Index {
     let rtx = self.database.begin_read()?;
     let inscription_number_to_inscription_id = rtx.open_table(INSCRIPTION_NUMBER_TO_INSCRIPTION_ID)?;
     let mut list:Vec<InscriptionJson> = Vec::new();
-    let get_inscriptions = self.get_inscriptions_api(page_size);
+    // let get_inscriptions = self.get_inscriptions_api(page_size);
     
     // Count total of inscriptions
     let total = inscription_number_to_inscription_id.iter()?.count();
